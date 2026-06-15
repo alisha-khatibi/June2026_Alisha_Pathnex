@@ -1,13 +1,14 @@
 ## What I Did Today
 
+3 hour class
 3 hour - Revised AWS
 1 hour - Coding Practice
-1 hour - English Speaking
 2 hours - Docker
 
 ## Tomorrow's Tasks
 
-* Revise Linux
+* Revise Docker
 * 1 hour Coding Practice
 * 1 hour News Paper Reading
-
+* 3 hour class
+* Interview question Practice
