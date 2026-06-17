@@ -1,0 +1,166 @@
+# Day 06 — DEBUG DAY
+
+Fix these broken files:
+
+## 🔹 Ansible (broken)
+
+- name Install nginx
+ hosts all
+ become yes
+ tasks:
+  -name: Install nginx
+  yum:
+    name nginx
+    state present
+
+
+   ### Fixed Code
+---
+- name: Install nginx
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Install nginx
+      yum:
+        name: nginx
+        state: present
+
+
+## 🔹 Terraform (broken)
+
+resource "aws_instance" "BrokenEC2" {
+  ami = "ami-0xyz"
+  instance_type = t2.micro
+tags {
+ Name = "Broken"
+}
+}
+
+
+### Fixed Code
+resource "aws_instance" "BrokenEC2" {
+  ami           = "ami-0xyz"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "Broken"
+  }
+}
+
+
+## 🔹 Kubernetes (broken)
+
+apiVersion v1
+kind Pod
+metadata:
+ name pathnex
+spec
+ containers:
+   - name app
+     image nginx
+
+
+### Fixed Code
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: pathnex
+
+spec:
+  containers:
+    - name: app
+      image: nginx
+
+
+
+#  Debugging Pipelines
+## 🔹 Jenkins Pipeline — Debugging
+here learn **fix broken stages and handle errors**.
+
+pipeline {
+    agent any
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Pathnex/sample-java-app.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh '''
+                mvn clean compile || { echo "Compile failed"; exit 1; }
+                '''
+            }
+        }
+        stage('Test') {
+            steps {
+                sh '''
+                mvn test || { echo "Tests failed"; exit 1; }
+                '''
+            }
+        }
+    }
+}
+
+Brief Summary: 
+
+Used to detect build and test failures clearly.
+
+"mvn clean compile || { echo "Compile failed"; exit 1; }"
+If compilation succeeds → pipeline continues.
+If compilation fails → displays "Compile failed" and stops the pipeline.
+
+"mvn test || { echo "Tests failed"; exit 1; }"
+If tests succeed → pipeline continues.
+If tests fail → displays "Tests failed" and stops the pipeline
+
+exit 1 = Failure → Jenkins marks the stage/pipeline as failed and stops execution
+
+
+
+## 🔹 GitLab CI — Debugging
+here learn how to **handle job failures and exit codes**.
+
+stages:
+  - build
+  - test
+
+build:
+  stage: build
+  image: maven:3.8.1-jdk-17
+  script:
+    - git clone https://github.com/Pathnex/sample-java-app.git
+    - cd sample-java-app
+    - mvn clean compile || { echo "Compile failed"; exit 1; }
+
+test:
+  stage: test
+  image: maven:3.8.1-jdk-17
+  script:
+    - cd sample-java-app
+    - mvn test || { echo "Tests failed"; exit 1; }
+
+
+## Brief Summary
+Used to identify build and test failures in GitLab pipelines.
+
+Build Job
+
+"mvn clean compile || { echo "Compile failed"; exit 1; }"
+If compilation succeeds → Job passes.
+If compilation fails → Prints "Compile failed" and job fails.
+
+Test Job
+
+"mvn test || { echo "Tests failed"; exit 1; }"
+If tests succeed → Job passes.
+If tests fail → Prints "Tests failed" and job fails.
+What is exit 1?
+
+GitLab uses Linux exit codes to determine success or failure:
+
+Exit Code	Meaning
+0	        Success
+1	        Failure
