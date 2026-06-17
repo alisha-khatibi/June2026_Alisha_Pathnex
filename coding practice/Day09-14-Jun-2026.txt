@@ -1,0 +1,175 @@
+# Day 09 — Templates, Internet Gateway, ConfigMap, CPU Load
+
+## 🔹 Ansible — Use Jinja2 Template
+
+---
+- name: Deploy template for Pathnex
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Copy template file
+      template:
+        src: pathnex.conf.j2
+        dest: /etc/pathnex.conf
+
+## Explanation:
+1. Ansible — Jinja2 Template
+Purpose
+
+Jinja2 templates allow you to create dynamic configuration files using variables.
+
+Code
+template:
+  src: pathnex.conf.j2
+  dest: /etc/pathnex.conf
+How it works
+
+Suppose pathnex.conf.j2 contains:
+
+Institute={{ institute_name }}
+Environment={{ env }}
+
+Variables:
+
+institute_name: Pathnex
+env: Production
+
+Generated file:
+
+Institute=Pathnex
+Environment=Production
+
+Benefits:
+Dynamic configuration
+Reusable templates
+Easy maintenance
+Key Concept
+
+Jinja2 Template = Configuration file + Variables
+
+
+
+##2 🔹 Terraform — Internet Gateway
+
+resource "aws_internet_gateway" "PathnexIGW" {
+  vpc_id = aws_vpc.PathnexVPC.id
+
+  tags = {
+    Name = "Pathnex-IGW"
+  }
+}
+
+##Explanation:
+What is an Internet Gateway?
+An Internet Gateway (IGW) allows resources inside a VPC to communicate with the internet.
+
+Architecture:
+Internet
+    ↑↓
+Internet Gateway
+    ↑↓
+VPC
+    ↑↓
+EC2
+
+
+##3 🔹 Kubernetes — Create ConfigMap
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pathnex-config
+data:
+  APP_MODE: "production"
+  WELCOME_MSG: "Hello Pathnex"
+
+##3 Explanation:
+What is a ConfigMap?
+A ConfigMap stores application configuration separately from container images.
+
+
+##3 🔹 Shell Script — Check CPU Load
+
+#!/bin/bash
+
+LOAD=$(uptime | awk '{print $10}')
+
+echo "Current CPU Load: $LOAD"
+
+##3 Shell Script — Check CPU Load
+Purpose: To check how busy the system CPU is.
+How it Works
+"uptime" displays system uptime and load average.
+
+Example:
+14:30:00 up 5 days, 2 users, load average: 0.25, 0.30, 0.35
+"awk '{print $10}'" extracts the first load average value.
+The value is stored in the variable "LOAD".
+echo prints the result.
+
+Output:
+Current CPU Load: 0.25
+
+
+
+# Artifacts and Archiving
+
+## 🔹 Jenkins Pipeline — Archive Artifacts
+ here learn how to **save build artifacts for future use**.
+
+pipeline {
+    agent any
+    environment {
+        INSTITUTE_NAME = "Pathnex"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/Pathnex/sample-java-app.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+        stage('Archive') {
+            steps {
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+            }
+        }
+    }
+}
+
+
+## 🔹 GitLab CI — Artifacts
+here learn how to **store artifacts in GitLab CI**.
+
+stages:
+  - build
+
+build:
+  stage: build
+  image: maven:3.8.1-jdk-17
+  script:
+    - git clone https://github.com/Pathnex/sample-java-app.git
+    - cd sample-java-app
+    - mvn clean package
+  artifacts:
+    paths:
+      - target/*.jar 
+    expire_in: 1 week
+
+
+## Explanation:
+
+What is an Artifact?
+An artifact is the output generated after a build e.g. .jar
+.war,.zip,.tar
+
+What it does:
+Saves JAR files in Jenkins
+Makes them downloadable later
+Tracks files using fingerprints
+
