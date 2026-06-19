@@ -1,0 +1,188 @@
+# Day 13 — DEBUG DAY
+
+Fix the following broken files:
+
+## 🔹 Ansible (broken)
+
+- name "Broken"
+ hosts: all
+ tasks:
+   - name: Install
+     yum:
+       name: nginx
+       state present
+
+## Fixed Code: 
+---
+- name: "Broken"
+  hosts: all
+
+  tasks:
+    - name: Install
+      yum:
+        name: nginx
+        state: present
+
+
+
+## 🔹 Terraform (broken)
+
+resouce "aws_instance" BadEC2 {
+  ami = ami-123
+instance_type="c5.large"
+tags = {
+ Name:"Broken"
+}
+}
+
+
+## Fixed Code:
+
+resource "aws_instance" "BadEC2" {
+  ami           = "ami-123"
+  instance_type = "c5.large"
+
+  tags = {
+    Name = "Broken"
+  }
+}
+
+
+## 🔹 Kubernetes (broken)
+
+apiVersion apps/v1
+kind Deployment
+metadata:
+name broken
+spec:
+ replicas 2
+ selector:
+   matchLabels:
+     app broken
+ template:
+  metadata:
+    labels:
+      app broken
+  spec:
+    containers:
+     - name app
+       image nginx
+
+
+## Fixed Code:
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: broken
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: broken
+
+  template:
+    metadata:
+      labels:
+        app: broken
+
+    spec:
+      containers:
+        - name: app
+          image: nginx
+
+# Matrix Builds
+
+What is a Matrix Build?
+A Matrix Build runs the same job multiple times with different values or environments automatically.
+
+
+## 🔹 Jenkins Pipeline — Matrix Build
+here learn how to run the same build on multiple environments.
+
+pipeline {
+    agent any
+    environment {
+        INSTITUTE_NAME = "Pathnex"
+    }
+    matrix {
+        axes {
+            axis {
+                name 'JAVA_VERSION'
+                values '8', '11', '17'
+            }
+        }
+        stages {
+            stage('Build') {
+                steps {
+                    sh "echo Building with Java $JAVA_VERSION"
+                }
+            }
+        }
+    }
+}
+
+
+##Explanation:
+
+Here Run the same build against multiple environments.
+
+Code
+values '8', '11', '17'
+
+Jenkins creates 3 builds:
+Build with Java 8
+Build with Java 11
+Build with Java 17
+
+Output:
+Building with Java 8
+Building with Java 11
+Building with Java 17
+
+Benefits:
+Test compatibility
+Multiple environments
+Faster validation
+
+
+## 🔹 GitLab CI — Matrix Jobs
+here learn how to run jobs across multiple environments using matrix.
+
+stages:
+  - build
+
+build:
+  stage: build
+  image: maven:3.8.1-jdk-17
+  parallel:
+    matrix:
+      - JAVA_VERSION: ['8', '11', '17']
+  script:
+    - echo "Building with Java $JAVA_VERSION"
+
+## Explanation:
+here Run the same build on multiple versions/environments.
+
+Code
+parallel:
+  matrix:
+    - JAVA_VERSION: ['8', '11', '17']
+
+GitLab automatically creates:
+Job 1 → Java 8
+Job 2 → Java 11
+Job 3 → Java 17
+
+Output:
+Building with Java 8
+Building with Java 11
+Building with Java 17
+
+Benefits:
+Parallel execution
+Multi-version testing
+Faster CI/CD
