@@ -1,0 +1,323 @@
+# Day 14 — MINI PROJECT
+
+Complete these steps:
+
+## 1️⃣ Terraform — Create EC2 (any instance type)
+
+- VPC
+- Subnet
+- Internet gateway
+- Route table
+- EC2 (c5.xlarge / r5.2xlarge / r6i.4xlarge / c6i.8xlarge / c6a.12xlarge)
+
+## Solution: 
+terraform-ec2-project/
+│
+├── provider.tf
+├── main.tf
+├── variables.tf
+└── outputs.tf
+
+1. provider.tf
+provider "aws" {
+  region = "ap-south-1"
+}
+
+
+2. variables.tf
+variable "instance_type" {
+  default = "c5.xlarge"
+}
+
+
+3. main.tf
+# VPC
+
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name = "MiniProject-VPC"
+  }
+}
+
+# Subnet
+
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "MiniProject-Subnet"
+  }
+}
+
+# Internet Gateway
+
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "MiniProject-IGW"
+  }
+}
+
+# Route Table
+
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = {
+    Name = "MiniProject-RT"
+  }
+}
+
+# Route Table Association
+
+resource "aws_route_table_association" "rta" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
+# Security Group
+
+resource "aws_security_group" "sg" {
+  name   = "MiniProject-SG"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# EC2 Instance
+
+resource "aws_instance" "server" {
+
+  ami                    = "ami-0f58b397bc5c1f2e8" # Amazon Linux 2023 (ap-south-1)
+  instance_type          = var.instance_type
+  subnet_id              = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.sg.id]
+
+  tags = {
+    Name = "MiniProject-EC2"
+  }
+}
+
+
+4. outputs.tf
+output "instance_id" {
+  value = aws_instance.server.id
+}
+
+output "public_ip" {
+  value = aws_instance.server.public_ip
+}
+
+
+## 2️⃣ Ansible — Install Nginx & Deploy HTML File
+
+
+ansible-nginx/
+├── inventory.ini
+├── nginx.yml
+└── index.html
+
+1. inventory.ini
+Replace the IP with your EC2 public IP.
+[web]
+13.234.xx.xx ansible_user=ec2-user ansible_ssh_private_key_file=~/Nabs-ec2-key.pem
+
+2. index.html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mini Project</title>
+</head>
+<body>
+    <h1>Nginx Installed Using Ansible</h1>
+    <h2>Welcome to My DevOps Mini Project</h2>
+</body>
+</html>
+
+
+3. nginx.yml
+
+Amazon Linux EC2
+---
+- name: Install Nginx and Deploy Website
+  hosts: web
+  become: yes
+
+  tasks:
+
+    - name: Install Nginx
+      yum:
+        name: nginx
+        state: present
+
+    - name: Start and Enable Nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Deploy HTML File
+      copy:
+        src: index.html
+        dest: /usr/share/nginx/html/index.html
+        owner: root
+        group: root
+        mode: '0644'
+
+## 3️⃣ Kubernetes — Create Deployment + Service
+
+Project Structure:
+
+k8s-mini-project/
+│
+├── deployment.yaml
+└── service.yaml
+
+1. deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: nginx-deployment
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: nginx
+
+  template:
+    metadata:
+      labels:
+        app: nginx
+
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+
+        ports:
+        - containerPort: 80
+
+2. service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: nginx-service
+
+spec:
+  selector:
+    app: nginx
+
+  type: NodePort
+
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30080
+
+
+
+## 4️⃣ Shell — Print CPU, Memory, Disk:
+
+Project Structure
+shell-mini-project/
+│
+└── system-info.sh
+
+
+Shell Script:
+
+#!/bin/bash
+
+echo "=============================="
+echo "   SYSTEM INFORMATION REPORT  "
+echo "=============================="
+
+echo
+echo "===== CPU INFORMATION ====="
+uptime
+
+echo
+echo "===== MEMORY INFORMATION ====="
+free -h
+
+echo
+echo "===== DISK INFORMATION ====="
+df -h
+
+echo
+echo "===== REPORT COMPLETED ====="
+
+
+# Scheduled Pipelines
+
+## 🔹 Jenkins Pipeline — Scheduled Build
+here learn how to **schedule a Jenkins pipeline using cron**.
+
+pipeline {
+    agent any
+    environment {
+        INSTITUTE_NAME = "Pathnex"
+    }
+    triggers {
+        cron('H 2 * * *') // every day at 2 AM
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/Pathnex/sample-java-app.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+    }
+}
+
+## 🔹 GitLab CI — Scheduled Pipeline
+here learn how to **schedule GitLab CI pipelines via cron**.
+
+stages:
+  - build
+
+build:
+  stage: build
+  image: maven:3.8.1-jdk-17
+  script:
+    - git clone https://github.com/Pathnex/sample-java-app.git
+    - cd sample-java-app
+    - mvn clean package
