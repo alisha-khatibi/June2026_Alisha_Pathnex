@@ -1,0 +1,173 @@
+# Day 15 — Java, S3 Bucket, CronJob, File Reader
+
+## 🔹 Ansible — Install Java & Set JAVA_HOME
+
+---
+- name: Install Java on Pathnex server
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Install OpenJDK
+      yum:
+        name: java-11-openjdk
+        state: present
+
+    - name: Set JAVA_HOME
+      lineinfile:
+        path: /etc/profile
+        line: 'export JAVA_HOME=/usr/lib/jvm/java-11-openjdk'
+
+
+
+
+##Explanation:
+Why Java?
+Many DevOps tools require Java:
+Jenkins,Maven,SonarQube,Tomcat,Kafka
+Without Java, these tools cannot run.
+
+1. With this Java 11 installed
+2.What is JAVA_HOME?
+JAVA_HOME tells applications where Java is installed and its version.
+
+
+
+## 🔹 Terraform — Create S3 Bucket
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_s3_bucket" "PathnexBucket" {
+  bucket = "pathnex-devops-bucket"
+
+  tags = {
+    Name = "PathnexBucket"
+  }
+}
+
+
+What is S3?
+S3 = Simple Storage Service
+AWS storage service used to store files.
+
+Bucket
+resource "aws_s3_bucket" "PathnexBucket"
+Creates a bucket=Think of a bucket as folder in the cloud
+
+## 🔹 Kubernetes — CronJob
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pathnex-cron
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: job
+              image: busybox
+              command: ["sh", "-c", "echo Pathnex CronJob running"]
+          restartPolicy: OnFailure
+
+What is a CronJob?
+A CronJob runs jobs automatically at scheduled times.
+Similar to Linux cron.
+Schedule
+schedule: "*/5 * * * *"
+Meaning:Every 5 minutes
+
+Cron Format
+* * * * *
+│ │ │ │ │
+│ │ │ │ └ Day of Week
+│ │ │ └ Month
+│ │ └ Day
+│ └ Hour
+└ Minute
+
+
+## 🔹 Shell Script — Read File Line-by-Line
+
+#!/bin/bash
+
+FILE="/etc/passwd"
+
+while read line; do
+  echo "Line: $line"
+done < $FILE
+
+
+What is /etc/passwd?
+Linux user information file.
+Example:
+root:x:0:0:root:/root:/bin/bash
+ubuntu:x:1000:1000::/home/ubuntu:/bin/bash
+
+# Advanced Notifications
+
+## 🔹 Jenkins Pipeline — Slack Notification
+here  learn how to **send Slack notifications after build success or failure**.
+
+pipeline {
+    agent any
+    environment {
+        INSTITUTE_NAME = "Pathnex"
+        SLACK_CHANNEL = "#devops"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/Pathnex/sample-java-app.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+    }
+    post {
+        success {
+            slackSend(channel: "$SLACK_CHANNEL", message: "SUCCESS: $INSTITUTE_NAME Build #${env.BUILD_NUMBER}")
+        }
+        failure {
+            slackSend(channel: "$SLACK_CHANNEL", message: "FAILURE: $INSTITUTE_NAME Build #${env.BUILD_NUMBER}")
+        }
+    }
+}
+
+Explanation:
+Problem
+Without notifications:Build finishes,Nobody knows.
+Solution:Jenkins sends Slack messages.
+SUCCESS: Pathnex Build #25
+FAILURE: Pathnex Build #25
+
+
+## 🔹 GitLab CI — Slack Notification
+here learn how to notify Slack in GitLab CI.
+
+stages:
+  - build
+
+variables:
+  INSTITUTE_NAME: "Pathnex"
+  SLACK_WEBHOOK: "https://hooks.slack.com/services/XXXXX/YYYYY/ZZZZZ"
+
+build:
+  stage: build
+  image: maven:3.8.1-jdk-17
+  script:
+    - git clone https://github.com/Pathnex/sample-java-app.git
+    - cd sample-java-app
+    - mvn clean package
+    - curl -X POST -H 'Content-type: application/json' --data '{"text":"Build success for Pathnex"}' $SLACK_WEBHOOK
+
+Slack notification helps the team know:
+Build Started,Build Successful ,Build Failed ,Deployment Completed 
+without opening GitLab.
