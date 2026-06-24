@@ -1,0 +1,203 @@
+# Day 16 — Ansible Roles, DynamoDB, StatefulSet, Service Check
+
+## 🔹 Ansible — Create Role Structure
+
+# Students must create:
+# roles/
+#   pathnex/
+#     tasks/main.yml
+#     handlers/main.yml
+#     templates/
+#     vars/main.yml
+
+What is a Role?
+An Ansible Role is a way to organize playbooks into reusable components.
+Instead of keeping everything in one file:playbook.yml
+Benefits:
+Reusable
+Organized
+Easy maintenance
+Industry standard
+
+
+Role Structure
+roles/
+└── pathnex/
+    ├── tasks/
+    │   └── main.yml
+    │
+    ├── handlers/
+    │   └── main.yml
+    │
+    ├── templates/
+    │
+    └── vars/
+        └── main.yml
+
+
+1.tasks/main.yml:Contains the main tasks to execute.:
+
+---
+- name: Install httpd
+  yum:
+    name: httpd
+    state: present
+
+2.handlers/main.yml:Handlers run only when notified
+---
+- name: Restart httpd
+  service:
+    name: httpd
+    state: restarted
+
+3.vars/main.yml:Stores variables.
+---
+package_name: httpd
+service_name: httpd
+
+4. templates/:Stores Jinja2 template files.
+
+index.html.j2
+
+
+
+
+## 🔹 Terraform — DynamoDB Table
+
+What is DynamoDB?
+DynamoDB is AWS's NoSQL database service.
+DynamoDB stores:Items,Attributes instead of Table, Rows, Columns
+
+
+resource "aws_dynamodb_table" "PathnexTable" {
+  name           = "PathnexTrainingTable"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "ID"
+
+  attribute {
+    name = "ID"
+    type = "S"
+  }
+
+  tags = {
+    Name = "Pathnex-DDB"
+  }
+}
+
+
+## 🔹 Kubernetes — StatefulSet
+
+What is a StatefulSet?
+A StatefulSet manages applications that require:Stable Names, Persistent Storage, Unique Identity
+e.g MySQL,MongoDB,PostgreSQL,Kafka
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pathnex-db
+spec:
+  serviceName: "pathnex"
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pathnex-db
+  template:
+    metadata:
+      labels:
+        app: pathnex-db
+    spec:
+      containers:
+        - name: db
+          image: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "Pathnex123"
+
+
+
+
+## 🔹 Shell Script — Check Service Running
+
+#!/bin/bash
+
+SERVICE="sshd"
+
+if systemctl is-active --quiet $SERVICE; then
+  echo "$SERVICE is running"
+else
+  echo "$SERVICE is NOT running"
+fi
+
+Explanation :
+Checks SSH service, Checks service status.
+If Running, Output:sshd is running
+If Stopped, Output:sshd is NOT running
+
+
+
+## 🔹 Jenkins Pipeline — Promote Artifacts
+here  learn how to **promote build artifacts from dev to staging**.
+
+pipeline {
+    agent any
+    environment {
+        INSTITUTE_NAME = "Pathnex"
+    }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+        stage('Promote') {
+            steps {
+                input message: "Promote artifacts to staging?"
+                sh 'echo "Promoting artifacts for $INSTITUTE_NAME"'
+            }
+        }
+    }
+}
+
+
+Explanation :
+# Artifacts Promotion:
+What is Artifact Promotion?
+Moving a build artifact from one environment to another.
+
+
+
+## 🔹 GitLab CI — Artifacts Promotion
+You will learn how to **promote artifacts manually using GitLab CI manual job**.
+
+stages:
+  - build
+  - promote
+
+build:
+  stage: build
+  image: maven:3.8.1-jdk-17
+  script:
+    - mvn clean package
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 week
+
+promote:
+  stage: promote
+  image: alpine:latest
+  script:
+    - echo "Promoting artifacts for Pathnex"
+  when: manual
+
+Explanation:
+
+Build Job
+Creates artifact:
+target/*.jar
+and stores it.
+
+Promotion Job
+when: manual
+Means:Do not run automatically
+User manually clicks:Play ▶in GitLab.
