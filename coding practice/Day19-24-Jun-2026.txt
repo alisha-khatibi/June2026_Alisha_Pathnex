@@ -1,0 +1,137 @@
+    # Day 19 — Git Deploy, RDS Skeleton, Rolling Strategy, Ping Check
+
+    ## 🔹 Ansible — Deploy App Using Git
+
+    ---
+    - name: Deploy app from Git for Pathnex
+    hosts: all
+    become: yes
+
+    tasks:
+        - name: Install git
+        yum:
+            name: git
+            state: present
+
+        - name: Clone repository
+        git:
+            repo: "https://github.com/pathnex/app.git"
+            dest: "/opt/pathnex-app"
+
+
+#Result:
+Server
+   │
+   └── /opt/pathnex-app
+         ├── app.py
+         ├── pom.xml
+         ├── Dockerfile
+         └── README.md
+
+ The Ansible Git module installs or updates application code directly from a Git repository on the target server.
+
+   
+   
+    ## 🔹 Terraform — RDS Skeleton (MySQL)
+
+    resource "aws_db_instance" "PathnexRDS" {
+    allocated_storage      = 20
+    engine                 = "mysql"
+    instance_class         = "db.t3.micro"
+    username               = "admin"
+    password               = "Pathnex123"
+    skip_final_snapshot    = true
+    }
+
+# Terraform provisions an AWS RDS MySQL database by defining storage, engine, instance size, and login credentials.
+
+
+    ## 🔹 Kubernetes — Deployment Rolling Update (Detailed)
+
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+    name: pathnex-rollout
+    spec:
+    replicas: 3
+    strategy:
+        type: RollingUpdate
+        rollingUpdate:
+        maxSurge: 2
+        maxUnavailable: 1
+    selector:
+        matchLabels:
+        app: rollout
+    template:
+        metadata:
+        labels:
+            app: rollout
+        spec:
+        containers:
+            - name: app
+            image: nginx
+# Explanation:
+# Rolling Updates replace old Pods with new Pods gradually while maintaining application availability.
+
+
+    ## 🔹 Shell Script — Check Internet Connectivity
+
+    #!/bin/bash
+
+    ping -c 2 google.com &> /dev/null
+
+    if [ $? -eq 0 ]; then
+    echo "Internet is available"
+    else
+    echo "No internet connection"
+    fi
+
+
+# Explanation:
+The script checks internet connectivity using ping; if the command succeeds, it reports that the internet is available.
+    
+    
+    
+    # Approvals
+
+    ## 🔹 Jenkins Pipeline — Manual Approval
+    You will learn how to **pause pipeline until manual approval**.
+
+    pipeline {
+        agent any
+        environment {
+            INSTITUTE_NAME = "Pathnex"
+        }
+        stages {
+            stage('Deploy') {
+                steps {
+                    input message: "Approve deployment for $INSTITUTE_NAME?"
+                    sh 'echo "Deployment approved and executed!"'
+                }
+            }
+        }
+    }
+
+
+# Explanation :
+The Jenkins input step pauses the pipeline and waits for manual approval before continuing.
+
+
+    ## 🔹 GitLab CI — Manual Approval Job
+    here learn how to **use manual jobs in GitLab CI for approvals**.
+
+    stages:
+    - deploy
+
+    variables:
+    INSTITUTE_NAME: "Pathnex"
+
+    deploy:
+    stage: deploy
+    image: alpine:latest
+    script:
+        - echo "Ready to deploy $INSTITUTE_NAME"
+    when: manual
+
+# Explanation:
+The when: manual keyword creates a manual job in GitLab CI that starts only after a user approves it.
