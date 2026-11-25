@@ -1,0 +1,139 @@
+# Day 25 - life in Lie , key pair, muiti-COntaier, file-configuration
+
+## Ansible- Modify Existing Line
+
+---
+- name: Update SSH config for Pathnex
+  hosts: all
+  become: yes
+
+tasks:
+  -name: Disable root login
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PermitRootLogin"
+    line:  "PermitRootLogin no"
+
+# Explanation:
+
+lineinfile : The lineinfile module modifies, replaces, or adds a specific line in an existing file without changing the rest of the file.
+Above searches line start with PermitRootLogin ad replace with PermitRootLogin no   
+
+## Terraform - EC2 Key Pair Output 
+
+# Purpose
+Create an AWS Key Pair using an existing public SSH key and display its name after creation.
+
+resource "aws_key_pair" "PathexKey" {
+    key_name = "PathexKey"
+    public_key = file("~/.ssh/id_rsa.pub")
+}
+
+output "Pathnex_Key_Name" {
+    value = aws_key_pair.PathnexKey.key_name
+}
+
+## Kubernetes - Muilti-Container Pod(Sidecr Logging)
+
+Purpose:
+Run multiple containers inside the same Pod including sidecar
+Sidecar: A sidecar container runs alongside the main application container within the same Pod and performs supporting tasks such as logging, monitoring, or proxying.
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: pathnex-sidecar
+ spec:
+ containers:
+ -name: appimage: nginx
+ -name: log-writer
+ image: busybox
+ commad: ["sh", "-c", "while true; do echo log entry; sleep 5; done"]
+
+
+## Shell Script - Count files in Directory
+wc -l = Counts the number of lines, ls $DIR = Lists all files.
+Example Output: Total files in /var/log: 25
+
+
+#!/bin/bash
+
+Dir= "/var/log"
+
+COUNT=$(ls $DIR | wc -l)
+
+echo "Total files in $DIR: $COUNT"
+
+
+# Advanced Caching
+
+## Jenkins Pipeline - Cache Dependencies
+
+here learn how to cache Maven dependecies with realistic labels.
+
+# Explanation:
+
+Jenkins checks whether the Maven cache exists. 
+If it does, previously downloaded dependencies are reused; 
+otherwise, Maven downloads them during the build.
+
+if [ -d ".m2" ]; then Checks if the .m2 directory exists.
+.m2 stores downloaded Maven dependencies.
+If present:
+Using cached dependencies for Pathnex in staging by DevOps
+No downloads are needed.
+If absent:mvn clean compile = Downloads dependencies and builds the project.
+
+
+pipeline {
+    agent any
+    evironment {
+        INSTITUTE_NAME = "Pathnex"
+        TEAM = "DevOps"
+        ENV = "staging"
+    }
+    stages {
+        stage('Checkout'){
+            steps{
+                git url: 'https://github.com/Pathnex/sample-java-app.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh '''
+                if [ -d ".m2" ]; then
+                  echo "Using cached dependecies for $INSTITUTE_NAME in ENV by $TEAM"
+                else 
+                  mvn clean compile
+                fi
+                '''
+            }
+        }
+    }  
+}
+
+## GitLab CI - Cache Dependencies
+here learn hoe to "cache dependencies in Gitlab CI with tags"
+
+Explanation:
+GitLab CI caches the Maven .m2/repository directory so dependencies can be reused across pipeline runs, significantly reducing build time.
+
+stages:
+ -build
+
+ variables :
+   INSTITUTE_NAME: "Pathnex"
+   TEAM: "DevOps"
+   ENV: "staging"
+
+build:
+    stage: build 
+    image: mven;3.8.1-jdk-17
+    cache:
+      key: "${ENV}-maven-cache"
+      paths:
+        - .m2/repository
+script:
+     -mvn clean compile 
+     -echo "Cached dependencies for $INSTITUTE_NME in $ENV by $TEAM"
+
