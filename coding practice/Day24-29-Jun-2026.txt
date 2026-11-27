@@ -1,0 +1,170 @@
+Day 24 - Template , ALB Listener, PV/PVC, Menu System
+
+## Ansible - Deploy Config Using Template
+
+Use a Jinja2 template to create a dynamic configuration file using variables.
+
+
+--- 
+- name: Deploy Pathnex template
+  hosts: all
+  become: yes
+
+  tasks:
+  - name: Create config 
+    template:
+      src: pthnex.conf.j2 
+      dest: /etc/pathnex.conf
+
+
+## Teraform - ALB Listener
+
+resource "aws_lb_listener" "PathexListner" {
+  load_balancer_arn = aws_lb.PathnexALB.arn
+  port             = "80"
+  protocol         = "HTTP"
+
+  default_action{
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Pathnex ALB Running"
+      status_code = "200"
+    }
+  }
+}
+
+# Explanation:
+1. An AWS ALB Listener listens for incoming client requests 
+on a specific port and protocol 
+(such as HTTP on port 80 or HTTPS on port 443).
+
+2.Based on configured rules, 
+it can forward requests to a target group, redirect them,
+or return a fixed response. 
+
+3.In this example, the listener 
+returns a plain-text message "Pathnex ALB Running" 
+with an HTTP 200 status code.
+      
+
+## Kubernetes- PV + PVC
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+ name: pathnex-pv
+ spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /data/pathnex
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pathnex-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+
+  # Explanation:
+  A Persistent Volume (PV) is a storage resource provided to a Kubernetes cluster, while a Persistent Volume Claim (PVC) is a request for storage made by a Pod. Kubernetes automatically binds a suitable PV to a PVC. This ensures that application data remains available even if Pods are deleted or recreated, making PV/PVC essential for stateful applications such as databases and file storage.
+
+      
+
+
+## 🔹 Shell Script — Menu Driven Program
+
+#!/bin/bash
+
+echo "1) Show date"
+echo "2) Show uptime"
+echo "3) Show users"
+
+read -p "Choose option: " opt
+
+case $opt in
+  1) date ;;
+  2) uptime ;;
+  3) who ;;
+  *) echo "Invalid choice" ;;
+esac
+
+#Explanation:
+A menu-driven shell script presents multiple options to the user, reads the selected option using read, and executes the appropriate command using a case statement.
+
+# Automated Testing Pipeline
+
+## 🔹 Jenkins Pipeline — Run Unit & Integration Tests
+You will learn how to **run multiple test suites and tag reports**.
+
+pipeline {
+    agent any
+    environment {
+        INSTITUTE_NAME = "Pathnex"
+        TEAM = "QA"
+        ENV = "dev"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/Pathnex/sample-java-app.git'
+            }
+        }
+        stage('Unit Test') {
+            steps {
+                sh 'mvn test -Dgroup=unit'
+            }
+        }
+        stage('Integration Test') {
+            steps {
+                sh 'mvn verify -Dgroup=integration'
+            }
+        }
+        stage('Report') {
+            steps {
+                sh 'echo "Tests completed for $INSTITUTE_NAME by $TEAM in $ENV environment"'
+            }
+        }
+    }
+}
+
+
+#Explanation:
+This Jenkins pipeline checks out the project, runs unit tests, then integration tests, and finally generates a report to confirm that all tests completed successfully.
+
+## 🔹 GitLab CI — Run Tests
+You will learn how to **run unit and integration tests in GitLab CI**.
+
+stages:
+  - unit
+  - integration
+
+variables:
+  INSTITUTE_NAME: "Pathnex"
+  TEAM: "QA"
+  ENV: "dev"
+
+unit-test:
+  stage: unit
+  image: maven:3.8.1-jdk-17
+  script:
+    - mvn test -Dgroup=unit
+    - echo "Unit tests completed for $INSTITUTE_NAME by $TEAM in $ENV"
+
+integration-test:
+  stage: integration
+  image: maven:3.8.1-jdk-17
+  script:
+    - mvn verify -Dgroup=integration
+    - echo "Integration tests completed for $INSTITUTE_NAME by $TEAM in $ENV"
+
+#Explanation:
+GitLab CI runs unit tests and integration tests as separate jobs in different stages. This makes the pipeline easier to monitor and helps identify failures more quickly.
